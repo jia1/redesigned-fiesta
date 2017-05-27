@@ -3,6 +3,10 @@
 
 import json, requests, time, urllib
 
+from db_helper import DBHelper
+
+db = DBHelper()
+
 with open('token.txt', 'r') as f:
     bot_token = f.readline().strip()
 
@@ -73,23 +77,25 @@ def send_message(text, chat_id):
     url = base_url + "sendMessage?text={}&chat_id={}".format(text, chat_id)
     http_get(url)
 
-# Reply the sender of each update with the corresponding received message (echo)
-def echo_all(updates):
+def handle_updates(updates):
     for update in updates["result"]:
         try:
             text = update["message"]["text"]
             chat = update["message"]["chat"]["id"]
-            send_message(text, chat)
-        except Exception as e:
-            print(e)
+            # Get args for insertion
+            # Call db.insert here
+            send_message("We have received your report. Thanks!", chat)
+        except KeyError:
+            pass
 
 def main():
+    db.create_table()
     last_update_id = None
     while True:
         updates = get_updates(last_update_id)
         if len(updates["result"]) > 0:
             last_update_id = get_last_update_id(updates) + 1
-            echo_all(updates)
+            handle_updates(updates)
         time.sleep(1)
 
 if __name__ == '__main__':
