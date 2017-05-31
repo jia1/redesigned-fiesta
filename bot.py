@@ -1,8 +1,7 @@
-# Source: https://www.codementor.io/garethdwyer
-# /building-a-telegram-bot-using-python-part-1-goi5fncay
+# Sources:
+# Building a Chatbot using Telegram and Python (Part 1) by Gareth Dwyer
 
 import json, requests, time, urllib
-
 from db_helper import DBHelper
 
 db = DBHelper()
@@ -10,92 +9,92 @@ db = DBHelper()
 with open('token.txt', 'r') as f:
     bot_token = f.readline().strip()
 
-base_url = "https://api.telegram.org/bot{}/".format(bot_token)
+base_url = 'https://api.telegram.org/bot{}'.format(bot_token)
 
-# Does a GET request on a full-length URL and returns a UTF8-decoded response
-# Decoding: Bytes to characters
-# Encoding: Characters to bytes
-# Unicode Transformation Format 8 (i.e. uses 8-bit blocks to represent a char)
-# UTF-8 is a compromise character encoding that can be as compact as ASCII
-def http_get(url):
-    response = requests.get(url)
-    content = response.content.decode("utf8")
-    return content
+replies = {}
+with open('replies.txt', 'r') as m:
+    num_lines, command = m.readline().strip().split(' ')
+    num_lines = int(num_lines)
+    while num_lines:
+        replies[command] = []
+        for i in range(num_lines):
+            replies[command].append(m.readline().strip())
+        num_lines, command = m.readline().strip().split(' ')
+        num_lines = int(num_lines)
 
-# Does a GET request on a full-length URL and returns a JSON-deserialized Python object
-# Deserialization: Extracting a data structure from a series of bytes (e.g. string)
-# Serialization: Translating a data structure into a format (e.g. string) for storage
+reporters = {}
+
+timeout_main = 300
+timeout_ask = 180
+
 def get_json_from_url(url):
-    content = http_get(url)
-    js = json.loads(content)
-    return js
+    response = requests.get(url)
+    decoded_content = response.content.decode('utf-8')
+    return json.loads(decoded_content)
 
-# Returns a Python object (JSON format) containing updates (e.g. messages received)
-# Bot will initiate a new check every minute, or whenever a new message is received
-# Updates of ID strictly smaller than a specified offset are omitted from the response
-# Sample response: {"ok":true,"result":[
-# {"update_id":NUMBER,"message":{"message_id":1,"from":{"id":NUMBER,
-# "first_name":"UTF8-encoded","language_code":"en-GB"},"chat":{"id":NUMBER,
-# "first_name":"UTF8-encoded","type":"private"},"date":EPOCH,"text":"TEXT"}},
-# {"update_id":NUMBER,"message":{"message_id":3,"from":{"id":NUMBER,
-# "first_name":"UTF8-encoded","language_code":"en-GB"},"chat":{"id":NUMBER,
-# "first_name":"UTF8-encoded","type":"private"},"date":EPOCH,"text":"TEXT"}}]}
-# update_id identifies updates from the senders (non-bots)
-# message_id is the position of the message in the entire archive of that chat
-def get_updates(offset = None):
-    url = base_url + "getUpdates?timeout=60"
+def get_updates(timeout, offset = None):
+    url = '{}/getUpdates?timeout={}'.format(base_url, timeout)
     if offset:
-        url += "&offset={}".format(offset)
-    js = get_json_from_url(url)
-    return js
+        url += '&offset={}'.format(offset)
+    return get_json_from_url(url)
 
-# Gets the latest update ID
-# Use case: We can then request for the latest X updates by calculating and specifying
-# the offset in get_updates
-def get_last_update_id(updates):
+def get_latest_update_id(updates):
     update_ids = []
-    for update in updates["result"]:
-        update_ids.append(int(update["update_id"]))
+    for update in updates['result']:
+        update_ids.append(int(update['update_id']))
     return max(update_ids)
 
-# Gets latest chat ID and the corresponding text
-# Chat ID identifies the sender
-def get_last_chat_id_and_text(updates):
-    num_updates = len(updates["result"])
-    last_update = num_updates - 1
-    text = updates["result"][last_update]["message"]["text"]
-    chat_id = updates["result"][last_update]["message"]["chat"]["id"]
+def get_latest_chat_id_and_text(updates):
+    text = updates['result'][-1]['message']['text']
+    chat_id = updates['result'][-1]['message']['chat']['id']
     return (text, chat_id)
 
-# (Bot) sends a message to a specified chat ID (i.e. a prompt or a reply)
-# quote_plus replaces special characters in string using the %xx escape
-# Letters, digits, and the characters '_.-' are never quoted
-# quote_plus also replaces spaces by plus signs for quoting HTML form values
-# when building up a query string to go into a URL
-def send_message(text, chat_id):
+def send_message(text, chat_id, reply_markup = None):
     text = urllib.parse.quote_plus(text)
-    url = base_url + "sendMessage?text={}&chat_id={}".format(text, chat_id)
-    http_get(url)
+    url = '{}/sendMessage?text={}&chat_id={}&parse_mode=Markdown'.format(base_url, text, chat_id)
+    if reply_markup:
+        url += '&reply_markup={}'.format(reply_markup)
+    requests.get(url)
 
-def handle_updates(updates):
-    for update in updates["result"]:
+def handle_updates(updates, latest_update_id):
+    for update in updates['result']:
         try:
-            text = update["message"]["text"]
-            chat = update["message"]["chat"]["id"]
-            # Get args for insertion
-            # Call db.insert here
-            send_message("We have received your report. Thanks!", chat)
+            text = update['message']['text']
+            chat = update['message']['chat']['id']
+            sender = update['message']['from']['id']
+
+            if sender in reporters:
+                reporters[sender].append(text)
+                reporters[sender][0] += 1
+                if reporters[sender][0] >= len(replies['questions']):
+                    send_message(replies['thanks'][0], chat)
+                    db.insert(reporters[sender][1:])
+                    reporters.pop(sender)
+                    continue
+                send_message(replies['questions'][reporters[sender][0]], chat)
+            elif text == '/help':
+                send_message(replies[text][0], chat)
+            elif text == '/start':
+                send_message('\n'.join(replies[text]), chat)
+            elif text == '/report':
+                send_message(replies[text][0], chat)
+                reporters[sender] = [0]
+                send_message(replies['questions'][0], chat)
+            elif text == '/view':
+                send_message(replies[text][0] + db.select_recent_pretty(), chat)
+            else:
+                send_message(replies['dk'][0], chat)
         except KeyError:
             pass
 
 def main():
     db.create_table()
-    last_update_id = None
+    latest_update_id = None
     while True:
-        updates = get_updates(last_update_id)
-        if len(updates["result"]) > 0:
-            last_update_id = get_last_update_id(updates) + 1
-            handle_updates(updates)
+        updates = get_updates(timeout_main, latest_update_id)
+        if updates['result']:
+            latest_update_id = get_latest_update_id(updates) + 1
+            handle_updates(updates, latest_update_id)
         time.sleep(1)
 
 if __name__ == '__main__':
