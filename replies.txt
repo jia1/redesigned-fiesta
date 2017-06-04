@@ -5,13 +5,19 @@ Hello, I am the SoCmentation bot. What would you like to do?
 /report - report faulty equipment
 /view - view reported equipment
 1 /report
-I will be asking you about the name, the location, and some info about the equipment:
+I will be asking you about the name, the location, and some info about the equipment. Please keep your answers short and sweet (i.e. within 64 characters). Thanks in advance!
 3 questions
 What is this faulty equipment you are reporting?
 Where is the faulty equipment?
 A description about the situation would be great:
 1 thanks
-We have received your report. Thanks! Please ping me with /start if you would like to reconnect with me. If not, goodbye!
+I have received your report. Thanks! Please ping me with /start if you would like to reconnect with me. If not, goodbye!
+1 invalid
+I am unable to process your response. Please check that you have written 60 characters or fewer in standard English, and resubmit your answer(s).
+1 cooldown
+You have already made a report recently. Please try again later.
+1 blacklisted
+You are a blacklisted sender, as it has come to our attention that you have been spamming. If you think this is a mistake, please email us at connect@nuscomputing.com to resolve this.
 1 /view
 Here are the recently reported equipment:
 1 poke

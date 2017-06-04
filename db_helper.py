@@ -7,11 +7,11 @@ import sqlite3
 
 db_name = "robodb.sqlite"
 tb_name = "robotb"
-mapping = "(timestamp INTEGER, datetime TEXT, name TEXT, location TEXT, description TEXT)"
-columns = "(timestamp, datetime, name, location, description)"
-display = "datetime, name, location, description"
+mapping = "timestamp INTEGER, name TEXT, location TEXT, description TEXT"
+columns = "timestamp, name, location, description"
 one_week = 604800    # 1 week
 one_year = 31540000  # 1 year
+max_data_length = 64 # 64 characters
 
 # Question mark style does not work here for some unknown reason
 # This way of string formatting may be vulnerable to SQL injection
@@ -22,28 +22,31 @@ class DBHelper:
         self.connection = sqlite3.connect(self.db_name)
 
     def create_table(self):
-        stmt = "CREATE TABLE IF NOT EXISTS {} {}".format(tb_name, mapping)
+        stmt = "CREATE TABLE IF NOT EXISTS {} ({})".format(tb_name, mapping)
         self.connection.execute(stmt)
         self.connection.commit()
 
-    def insert(self, row):
-        name, location, description = row
-        date = int(time())
-        args = (date, prettify_date(date), name, location, description)
-        stmt = "INSERT INTO {} {} VALUES {}".format(tb_name, columns, str(args))
-        self.connection.execute(stmt)
-        self.connection.commit()
+    def insert(self, input_row):
+        is_valid, violations = self.validate_row(input_row)
+        if is_valid:
+            name, location, description = input_row
+            date = int(time())
+            args = (date, name, location, description)
+            stmt = "INSERT INTO {} ({}) VALUES {}".format(tb_name, columns, str(args))
+            self.connection.execute(stmt)
+            self.connection.commit()
+        return (is_valid, violations)
 
     def select_recent(self):
         last = int(time()) - one_week
-        stmt = "SELECT {} FROM {} WHERE datetime >= {} ORDER BY datetime DESC".format(
-            display, tb_name, str(last))
+        stmt = "SELECT {} FROM {} WHERE timestamp >= {} ORDER BY timestamp DESC".format(
+            columns, tb_name, str(last))
         rows = self.connection.execute(stmt)
         return rows
 
     def delete_old(self):
         last = int(time()) - one_year
-        stmt = "DELETE FROM {} WHERE datetime >= {}".format(tb_name, str(last))
+        stmt = "DELETE FROM {} WHERE timestamp >= {}".format(tb_name, str(last))
         self.connection.execute(stmt)
         self.connection.commit()
 
@@ -53,5 +56,13 @@ class DBHelper:
     def prettify_rows(self, rows):
         str_builder = ['\n']
         for row in rows:
-            str_builder.extend(row)
+            str_builder.append("When: {}".format(prettify_date(row[0])))
+            str_builder.extend(row[1:])
+            str_builder.append('')
         return '\n'.join(str_builder)
+
+    def validate_row(self, input_row):
+        length_exceeded = [data for data in input_row if len(data) > max_data_length]
+        if length_exceeded:
+            return (False, length_exceeded)
+        return (True, [])
