@@ -5,7 +5,7 @@ Hello, I am the SoCmentation bot. What would you like to do?
 /report - report faulty equipment
 /view - view reported equipment
 1 /report
-I will be asking you about the name, the location, and some info about the equipment. Please keep your answers short and sweet (i.e. within 64 characters). Thanks in advance!
+I will be asking you some details about the equipment. Please keep your answers short and sweet (70 characters or fewer), and in standard English. Thanks in advance!
 3 questions
 What is this faulty equipment you are reporting?
 Where is the faulty equipment?
@@ -13,7 +13,7 @@ A description about the situation would be great:
 1 thanks
 I have received your report. Thanks! Please ping me with /start if you would like to reconnect with me. If not, goodbye!
 1 invalid
-I am unable to process your response. Please check that you have written 60 characters or fewer in standard English, and resubmit your answer(s).
+I am unable to process your response. Please check that you have written 70 characters or fewer, and in standard English before resubmitting your response(s).
 1 cooldown
 You have already made a report recently. Please try again later.
 1 blacklisted

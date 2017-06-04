@@ -11,7 +11,7 @@ mapping = "timestamp INTEGER, name TEXT, location TEXT, description TEXT"
 columns = "timestamp, name, location, description"
 one_week = 604800    # 1 week
 one_year = 31540000  # 1 year
-max_data_length = 64 # 64 characters
+max_data_length = 70 # 70 characters
 
 # Question mark style does not work here for some unknown reason
 # This way of string formatting may be vulnerable to SQL injection
