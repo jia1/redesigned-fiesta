@@ -27,10 +27,12 @@ with open('replies.txt', 'r') as m:
         num_lines, command = m.readline().strip().split(' ')
         num_lines = int(num_lines)
 logging.info("Reply messages loaded into memory")
+logging.info("Reply messages: {}".format(replies))
 
 blacklisted = {}
 with open('blacklisted.txt', 'r') as f:
     num_blacklisted = int(f.readline().strip())
+    logging.info("Loading {} blacklisted senders into memory...".format(num_blacklisted))
     for n in range(num_blacklisted):
         offender = int(f.readline().strip())
         if offender in blacklisted:
@@ -50,10 +52,12 @@ timeout_oth = 300
 timeout_ask = 180
 logging.info("Response timeouts loaded into memory")
 
+min_ans_len = 10
 max_ans_len = 70
 num_questions = len(replies['questions'])
-report_cooldown = 1800
+report_cooldown = 60
 logging.info("Other variables loaded into memory")
+logging.info("Number of questions: {}".format(num_questions))
 
 def get_json_from_url(url):
     response = requests.get(url)
@@ -97,6 +101,7 @@ def handle_updates(updates, latest_update_id):
             logging.info("handle_updates: Received %s from %d", text.encode('utf-8'), sender)
 
             if not is_ascii:
+                logging.info("handle_updates: Block non-ascii message")
                 send_message(replies['invalid'][0], chat)
                 continue
 
@@ -109,36 +114,45 @@ def handle_updates(updates, latest_update_id):
                         inserted, violations = db.insert(answers)
                         reporting.pop(sender)
                         if inserted:
-                            logging.info("handle_updates: Insert %s returns %r", str(answers), inserted)
+                            logging.info("handle_updates: Database insertion success for %s", str(answers))
                             send_message(replies['thanks'][0], chat)
                             last_submitted = int(time.time())
                             reporters_dict[sender] = last_submitted
                             reporters_list.append(sender)
                             last_submitted_times.append(last_submitted)
                         else:
+                            logging.info("handle_updates: Database insertion failure")
                             send_message(replies['invalid'][0], chat)
                     else:
+                        logging.info("handle_updates: Asking the next question...")
                         send_message(replies['questions'][reporting[sender][0]], chat)
                 else:
+                    logging.info("handle_updates: Invalid answer %s, asking again...", text.encode('utf-8'))
                     send_message(replies['invalid'][0], chat)
                     send_message(replies['questions'][reporting[sender][0]], chat)
             elif text == '/help':
+                logging.info("handle_updates: /help")
                 send_message(replies[text][0], chat)
             elif text == '/start':
+                logging.info("handle_updates: /start")
                 send_message('\n'.join(replies[text]), chat)
             elif text == '/report':
                 if sender in blacklisted:
+                    logging.info("handle_updates: %d is a blacklisted sender", sender)
                     send_message(replies['blacklisted'][0], chat)
                 elif is_recent_reporter(sender):
-                    logging.info("handle_updates: %d not in blacklist", sender)
+                    logging.info("handle_updates: %d is a recent reporter", sender)
                     send_message(replies['cooldown'][0], chat)
                 else:
+                    logging.info("handle_updates: /report")
                     send_message(replies[text][0], chat)
                     reporting[sender] = [0]
                     send_message(replies['questions'][0], chat)
             elif text == '/view':
+                logging.info("handle_updates: /view")
                 send_message(replies[text][0] + db.select_recent_pretty(), chat)
             else:
+                logging.info("handle_updates: %d is speaking Greek", sender)
                 send_message(replies['dk'][0], chat)
         except KeyError:
             pass
@@ -146,8 +160,8 @@ def handle_updates(updates, latest_update_id):
 def is_recent_reporter(sender_id):
     global reporters_dict, reporters_list, last_submitted_times
     least_recent_index = bisect(last_submitted_times, int(time.time()) - report_cooldown)
-    for expired_reporter in range(least_recent_index):
-        reporters_dict.pop(expired_reporter)
+    for expired_reporter_index in range(least_recent_index):
+        reporters_dict.pop(reporters_list[expired_reporter_index])
     last_submitted_times = last_submitted_times[least_recent_index:]
     reporters_list = reporters_list[least_recent_index:]
     is_recent = sender_id in reporters_dict
@@ -155,9 +169,12 @@ def is_recent_reporter(sender_id):
     return is_recent
 
 def validate_answer(ans):
-    too_long = len(ans) > max_ans_len
-    logging.info("validate_answer: %s returns %r", str(ans), not too_long)
-    return not too_long
+    ans_length = len(ans)
+    too_long = ans_length > max_ans_len
+    too_short = ans_length < min_ans_len
+    is_valid_length = not too_long and not too_short
+    logging.info("validate_answer: %s returns %r", str(ans), is_valid_length)
+    return is_valid_length
 
 def main():
     db.create_table()

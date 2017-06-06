@@ -11,6 +11,7 @@ mapping = "timestamp INTEGER, name TEXT, location TEXT, description TEXT"
 columns = "timestamp, name, location, description"
 one_week = 604800    # 1 week
 one_year = 31540000  # 1 year
+min_data_length = 10 # 10 characters
 max_data_length = 70 # 70 characters
 
 # Question mark style does not work here for some unknown reason
@@ -62,7 +63,7 @@ class DBHelper:
         return '\n'.join(str_builder)
 
     def validate_row(self, input_row):
-        length_exceeded = [data for data in input_row if len(data) > max_data_length]
-        if length_exceeded:
-            return (False, length_exceeded)
+        bad_length = [data for data in input_row if len(data) > max_data_length or len(data) < min_data_length]
+        if bad_length:
+            return (False, bad_length)
         return (True, [])

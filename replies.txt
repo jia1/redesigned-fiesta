@@ -13,7 +13,7 @@ A description about the situation would be great:
 1 thanks
 I have received your report. Thanks! Please ping me with /start if you would like to reconnect with me. If not, goodbye!
 1 invalid
-I am unable to process your response. Please check that you have written 70 characters or fewer, and in standard English before resubmitting your response(s).
+I am unable to process your response. Please check that you have written between 10 to 70 characters, and in standard English before resubmitting your response(s).
 1 cooldown
 You have already made a report recently. Please try again later.
 1 blacklisted
