@@ -27,13 +27,13 @@ with open('replies.txt', 'r') as m:
         num_lines, command = m.readline().strip().split(' ')
         num_lines = int(num_lines)
 logging.info("Reply messages loaded into memory")
-logging.info("Reply messages: {}".format(replies))
+logging.info("Reply messages: %s", replies)
 
 blacklisted = {}
 with open('blacklisted.txt', 'r') as f:
-    num_blacklisted = int(f.readline().strip())
-    logging.info("Loading {} blacklisted senders into memory...".format(num_blacklisted))
-    for n in range(num_blacklisted):
+    num_blacklisted = f.readline().strip()
+    logging.info("Loading %s blacklisted senders into memory...", num_blacklisted)
+    for n in range(int(num_blacklisted)):
         offender = int(f.readline().strip())
         if offender in blacklisted:
             blacklisted[offender] += 1
@@ -57,7 +57,7 @@ max_ans_len = 70
 num_questions = len(replies['questions'])
 report_cooldown = 60
 logging.info("Other variables loaded into memory")
-logging.info("Number of questions: {}".format(num_questions))
+logging.info("Number of questions: %d", num_questions)
 
 def get_json_from_url(url):
     response = requests.get(url)
@@ -76,19 +76,19 @@ def get_latest_update_id(updates):
     for update in updates['result']:
         update_ids.append(int(update['update_id']))
     latest_update_id = max(update_ids)
-    logging.info("get_latest_update_id: Latest update ID is %d of %s", latest_update_id, update_ids)
+    logging.info("get_latest_update_id: Latest update ID is %s of %s", latest_update_id, update_ids)
     return latest_update_id
 
 def get_latest_chat_id_and_text(updates):
     text = updates['result'][-1]['message']['text'].encode('utf-8')
     chat_id = updates['result'][-1]['message']['chat']['id']
-    logging.info("get_latest_chat_id_and_text: Latest message is %s from chat %d", text, chat_id)
+    logging.info("get_latest_chat_id_and_text: Latest message is %s from chat %s", text, chat_id)
     return (text, chat_id)
 
 def send_message(text, chat_id):
     text = urllib.parse.quote_plus(text)
     url = '{}/sendMessage?text={}&chat_id={}&parse_mode=Markdown'.format(base_url, text, chat_id)
-    logging.info("send_message: Sending %s to chat %d", text, chat_id)
+    logging.info("send_message: Sending %s to chat %s", text, chat_id)
     requests.get(url)
 
 def handle_updates(updates, latest_update_id):
@@ -98,7 +98,7 @@ def handle_updates(updates, latest_update_id):
             chat = update['message']['chat']['id']
             sender = update['message']['from']['id']
             is_ascii = all(ord(char) < 128 for char in text)
-            logging.info("handle_updates: Received %s from %d", text.encode('utf-8'), sender)
+            logging.info("handle_updates: Received %s from %s", text.encode('utf-8'), sender)
 
             if not is_ascii:
                 logging.info("handle_updates: Block non-ascii message")
@@ -114,7 +114,7 @@ def handle_updates(updates, latest_update_id):
                         inserted, violations = db.insert(answers)
                         reporting.pop(sender)
                         if inserted:
-                            logging.info("handle_updates: Database insertion success for %s", str(answers))
+                            logging.info("handle_updates: Database insertion success for %s", answers)
                             send_message(replies['thanks'][0], chat)
                             last_submitted = int(time.time())
                             reporters_dict[sender] = last_submitted
@@ -138,10 +138,10 @@ def handle_updates(updates, latest_update_id):
                 send_message('\n'.join(replies[text]), chat)
             elif text == '/report':
                 if sender in blacklisted:
-                    logging.info("handle_updates: %d is a blacklisted sender", sender)
+                    logging.info("handle_updates: %s is a blacklisted sender", sender)
                     send_message(replies['blacklisted'][0], chat)
                 elif is_recent_reporter(sender):
-                    logging.info("handle_updates: %d is a recent reporter", sender)
+                    logging.info("handle_updates: %s is a recent reporter", sender)
                     send_message(replies['cooldown'][0], chat)
                 else:
                     logging.info("handle_updates: /report")
@@ -152,7 +152,7 @@ def handle_updates(updates, latest_update_id):
                 logging.info("handle_updates: /view")
                 send_message(replies[text][0] + db.select_recent_pretty(), chat)
             else:
-                logging.info("handle_updates: %d is speaking Greek", sender)
+                logging.info("handle_updates: %s is speaking Greek", sender)
                 send_message(replies['dk'][0], chat)
         except KeyError:
             pass
@@ -165,7 +165,7 @@ def is_recent_reporter(sender_id):
     last_submitted_times = last_submitted_times[least_recent_index:]
     reporters_list = reporters_list[least_recent_index:]
     is_recent = sender_id in reporters_dict
-    logging.info("is_recent_reporter: %d returns %r", sender_id, is_recent)
+    logging.info("is_recent_reporter: %s returns %r", sender_id, is_recent)
     return is_recent
 
 def validate_answer(ans):
@@ -173,7 +173,7 @@ def validate_answer(ans):
     too_long = ans_length > max_ans_len
     too_short = ans_length < min_ans_len
     is_valid_length = not too_long and not too_short
-    logging.info("validate_answer: %s returns %r", str(ans), is_valid_length)
+    logging.info("validate_answer: %s returns %r", ans, is_valid_length)
     return is_valid_length
 
 def main():
