@@ -5,17 +5,18 @@ from time import strftime, time
 from pretty_date import prettify_date
 import sqlite3
 
+pholder = "?"
 db_name = "robodb.sqlite"
 tb_name = "robotb"
-mapping = "timestamp INTEGER, name TEXT, location TEXT, description TEXT"
-columns = "timestamp, name, location, description"
-one_week = 604800    # 1 week
-one_year = 31540000  # 1 year
-min_data_length = 10 # 10 characters
-max_data_length = 70 # 70 characters
+col_def = "timestamp INTEGER, name TEXT, location TEXT, description TEXT"
+col_all = "timestamp, name, location, description"
+col_sub = "{0}, {0}, {0}, {0}".format(pholder)
+sec_per_wk = 604800     # 1 week
+sec_per_yr = 31540000   # 1 year
+min_data_length = 10    # 10 characters
+max_data_length = 70    # 70 characters
 
-# Question mark style does not work here for some unknown reason
-# This way of string formatting may be vulnerable to SQL injection
+# See https://stackoverflow.com/questions/7929364 for more details
 
 class DBHelper:
     def __init__(self):
@@ -23,7 +24,7 @@ class DBHelper:
         self.connection = sqlite3.connect(self.db_name)
 
     def create_table(self):
-        stmt = "CREATE TABLE IF NOT EXISTS {} ({})".format(tb_name, mapping)
+        stmt = "CREATE TABLE IF NOT EXISTS {0} ({1})".format(tb_name, col_def)
         self.connection.execute(stmt)
         self.connection.commit()
 
@@ -33,21 +34,20 @@ class DBHelper:
             name, location, description = input_row
             date = int(time())
             args = (date, name, location, description)
-            stmt = "INSERT INTO {} ({}) VALUES {}".format(tb_name, columns, str(args))
-            self.connection.execute(stmt)
+            stmt = "INSERT INTO {0} ({1}) VALUES ({2})".format(tb_name, col_all, col_sub)
+            self.connection.execute(stmt, args)
             self.connection.commit()
         return (is_valid, violations)
 
     def select_recent(self):
-        last = int(time()) - one_week
-        stmt = "SELECT {} FROM {} WHERE timestamp >= {} ORDER BY timestamp DESC".format(
-            columns, tb_name, str(last))
+        last = int(time()) - sec_per_wk
+        stmt = "SELECT {0} FROM {1} WHERE timestamp >= {2} ORDER BY timestamp DESC".format(col_all, tb_name, last)
         rows = self.connection.execute(stmt)
         return rows
 
     def delete_old(self):
-        last = int(time()) - one_year
-        stmt = "DELETE FROM {} WHERE timestamp >= {}".format(tb_name, str(last))
+        last = int(time()) - sec_per_yr
+        stmt = "DELETE FROM {0} WHERE timestamp >= {1}".format(tb_name, last)
         self.connection.execute(stmt)
         self.connection.commit()
 
@@ -59,7 +59,7 @@ class DBHelper:
         for row in rows:
             str_builder.append("When: {}".format(prettify_date(row[0])))
             str_builder.extend(row[1:])
-            str_builder.append('')
+            str_builder.append("")
         return '\n'.join(str_builder)
 
     def validate_row(self, input_row):

@@ -107,7 +107,7 @@ def handle_updates(updates, latest_update_id):
 
             if sender in reporting:
                 if validate_answer(text):
-                    reporting[sender].append(text)
+                    reporting[sender].append(sanitise(text))
                     reporting[sender][0] += 1
                     if reporting[sender][0] >= num_questions:
                         answers = reporting[sender][1:]
@@ -175,6 +175,12 @@ def validate_answer(ans):
     is_valid_length = not too_long and not too_short
     logging.info("validate_answer: %s returns %r", ans, is_valid_length)
     return is_valid_length
+
+def sanitise(ans):
+    conditions = ["\\\"", "\\'", "\"", "'"]
+    for condition in conditions:
+        ans = ans.replace(condition, " " * len(condition))
+    return ans
 
 def main():
     db.create_table()
