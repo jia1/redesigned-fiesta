@@ -20,7 +20,10 @@ You have already made a report recently. Please try again later.
 You are a blacklisted sender, as it has come to our attention that you have been spamming. If you think this is a mistake, please email us at connect@nuscomputing.com to resolve this.
 1 /view
 Here are the recently reported equipment:
-1 poke
+2 /exit
+Feel free to ping me with /start to connect with me again!
+Alright, I will remove your pending report!
+1 kill
 I am afraid I cannot keep this session alive any longer. Please ping me with /start to connect with me again!
 1 dk
 I am currently an if-else bot and so I am unable to understand you. Would you like to enter /start to see how you can interact with me?
